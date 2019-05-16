@@ -15,6 +15,9 @@ declare module 'leaflet' {
     ) => PixiOverlay;
 }
 
+const MAX_GRAPHICS_BUFFERS = 50;
+const MARKER_PER_GRAPHICS = 100;
+
 type MapOptions = {
     initialCenter?: L.LatLngExpression;
     initialZoom?: number;
@@ -66,12 +69,24 @@ export const createMap = (options: MapOptions) => {
             this.pixiOverlay.redraw(this.props.markers);
         }
 
+        componentWillUnmount() {
+            this.destroyGraphicsBuffer();
+        }
+
         increaseGraphicsBuffer = (amount: number) => {
             for (let index = 0; index < amount; index++) {
+                if (this.pixiGraphics.length >= MAX_GRAPHICS_BUFFERS) {
+                    break;
+                }
                 const graphics = new PIXI.Graphics();
                 this.pixiContainer.addChild(graphics);
                 this.pixiGraphics.push(graphics);
             }
+        };
+
+        destroyGraphicsBuffer = () => {
+            this.pixiGraphics.forEach(graphic => graphic.destroy());
+            this.pixiContainer.destroy();
         };
 
         initializeMap = () => {
@@ -106,18 +121,26 @@ export const createMap = (options: MapOptions) => {
                 }
 
                 if (shouldUpdateMarker || prevZoom !== zoom) {
-                    if (this.pixiGraphics.length < this.markers.length) {
-                        this.increaseGraphicsBuffer(this.markers.length - this.pixiGraphics.length);
+                    if (this.pixiGraphics.length < this.markers.length * MARKER_PER_GRAPHICS) {
+                        this.increaseGraphicsBuffer(
+                            this.markers.length / MARKER_PER_GRAPHICS - this.pixiGraphics.length
+                        );
                     }
+                    this.pixiGraphics.forEach(graphic => graphic.clear());
                     for (let i = 0; i < this.markers.length; i++) {
-                        const graphic = this.pixiGraphics[i];
+                        const bufferIndex = Math.floor(i / MARKER_PER_GRAPHICS);
+                        const graphic = this.pixiGraphics[bufferIndex];
                         if (!graphic) {
                             break;
                         }
-                        graphic.clear();
                         const marker = this.markers[i];
                         const { x, y } = project([marker.x, marker.y]);
-                        this.drawMarker(graphic, marker, x, y, scale);
+                        // this.drawMarker(graphic, marker, x, y, scale);
+
+                        graphic.lineStyle(3 / scale, 0x3388ff, 1);
+                        graphic.beginFill(0xff0000);
+                        graphic.drawCircle(x, y, 12 / scale);
+                        graphic.endFill();
                     }
                 }
 
