@@ -9,7 +9,8 @@ const config = {
         rules: [
             {
                 test: /\.tsx?$/,
-                use: 'awesome-typescript-loader'
+                use: 'ts-loader',
+                exclude: /node_modules/
             },
             {
                 test: /\.css$/,
