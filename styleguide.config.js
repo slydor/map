@@ -5,5 +5,6 @@ module.exports = {
             name: 'Map',
             content: './src/Readme.md'
         }
-    ]
+    ],
+    showSidebar: false
 };

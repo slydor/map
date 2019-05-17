@@ -1,7 +1,7 @@
 import * as React from 'react';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import * as PIXI from 'pixi.js';
+import { Container, Graphics, Text } from 'pixi.js';
 import 'leaflet-pixi-overlay';
 
 declare module 'leaflet' {
@@ -10,13 +10,12 @@ declare module 'leaflet' {
     }
     let pixiOverlay: (
         drawCallback: (utils: any, eventOrCustomData: Event | Array<MapMarker>) => void,
-        container: PIXI.Container,
+        container: Container,
         options?: any
     ) => PixiOverlay;
 }
 
-const MAX_GRAPHICS_BUFFERS = 50;
-const MARKER_PER_GRAPHICS = 100;
+const MARKER_LIMIT = 5000;
 
 type MapOptions = {
     initialCenter?: L.LatLngExpression;
@@ -26,6 +25,7 @@ type MapOptions = {
 type MapMarker = {
     x: number;
     y: number;
+    label?: string;
 };
 
 export type MapProps = {
@@ -37,31 +37,34 @@ export const createMap = (options: MapOptions) => {
     const center = options.initialCenter || [54.326558, 10.159083];
     const zoom = options.initialZoom || 11;
     const minZoom = 0;
-    const maxZoom = 18;
+    const maxZoom = 14;
 
     return class Map extends React.PureComponent<MapProps> {
-        map!: L.Map;
+        map: L.Map;
 
-        pixiOverlay!: L.PixiOverlay;
+        pixiOverlay: L.PixiOverlay;
 
-        pixiContainer!: PIXI.Container;
+        pixiContainer: Container;
 
-        pixiGraphics: Array<PIXI.Graphics>;
+        pixiGraphics: Array<Graphics>;
 
         markers: Array<MapMarker>;
+
+        textBuffers: Array<Text> = [];
 
         static defaultProps = {
             height: '100%',
             markers: new Array<MapMarker>()
         };
+
         constructor(props: MapProps) {
             super(props);
             this.pixiGraphics = [];
             this.markers = [];
         }
+
         componentDidMount() {
             this.initializeMap();
-            this.increaseGraphicsBuffer(100);
             this.pixiOverlay.redraw(this.props.markers);
         }
 
@@ -75,10 +78,10 @@ export const createMap = (options: MapOptions) => {
 
         increaseGraphicsBuffer = (amount: number) => {
             for (let index = 0; index < amount; index++) {
-                if (this.pixiGraphics.length >= MAX_GRAPHICS_BUFFERS) {
+                if (this.pixiGraphics.length >= MARKER_LIMIT) {
                     break;
                 }
-                const graphics = new PIXI.Graphics();
+                const graphics = new Graphics();
                 this.pixiContainer.addChild(graphics);
                 this.pixiGraphics.push(graphics);
             }
@@ -106,56 +109,78 @@ export const createMap = (options: MapOptions) => {
             }).addTo(this.map);
 
             let prevZoom: number | undefined;
-            this.pixiContainer = new PIXI.Container();
-            this.pixiOverlay = L.pixiOverlay((utils, data) => {
-                const zoom = utils.getMap().getZoom();
-                const container = utils.getContainer();
-                const renderer = utils.getRenderer();
-                const project = utils.latLngToLayerPoint;
-                const scale = utils.getScale();
+            this.pixiContainer = new Container();
+            this.pixiOverlay = L.pixiOverlay(
+                (utils, data) => {
+                    const zoom = utils.getMap().getZoom();
+                    const container = utils.getContainer();
+                    const renderer = utils.getRenderer();
+                    const project = utils.latLngToLayerPoint;
+                    const scale = utils.getScale();
 
-                const shouldUpdateMarker = Array.isArray(data);
+                    const shouldUpdateMarker = Array.isArray(data);
 
-                if (shouldUpdateMarker) {
-                    this.markers = data as Array<MapMarker>;
-                }
-
-                if (shouldUpdateMarker || prevZoom !== zoom) {
-                    if (this.pixiGraphics.length < this.markers.length * MARKER_PER_GRAPHICS) {
-                        this.increaseGraphicsBuffer(
-                            this.markers.length / MARKER_PER_GRAPHICS - this.pixiGraphics.length
-                        );
+                    if (shouldUpdateMarker) {
+                        this.markers = data as Array<MapMarker>;
                     }
-                    this.pixiGraphics.forEach(graphic => graphic.clear());
-                    for (let i = 0; i < this.markers.length; i++) {
-                        const bufferIndex = Math.floor(i / MARKER_PER_GRAPHICS);
-                        const graphic = this.pixiGraphics[bufferIndex];
-                        if (!graphic) {
-                            break;
+
+                    if (shouldUpdateMarker || prevZoom !== zoom) {
+                        if (this.pixiGraphics.length < this.markers.length) {
+                            this.increaseGraphicsBuffer(this.markers.length - this.pixiGraphics.length);
                         }
-                        const marker = this.markers[i];
-                        const { x, y } = project([marker.x, marker.y]);
-                        // this.drawMarker(graphic, marker, x, y, scale);
+                        // cleanup from previous rendering
+                        this.pixiGraphics.forEach(graphic => graphic.clear());
+                        this.textBuffers.forEach(text => {
+                            text.destroy();
+                            this.pixiContainer.removeChild(text);
+                        });
+                        this.textBuffers = [];
+                        // draw
+                        for (let index = 0; index < this.markers.length; index++) {
+                            const graphic = this.pixiGraphics[index];
+                            if (!graphic) {
+                                break;
+                            }
+                            const marker = this.markers[index];
+                            const { x, y } = project([marker.x, marker.y]);
+                            this.drawMarker(graphic, marker, x, y, scale);
 
-                        graphic.lineStyle(3 / scale, 0x3388ff, 1);
-                        graphic.beginFill(0xff0000);
-                        graphic.drawCircle(x, y, 12 / scale);
-                        graphic.endFill();
+                            const { label } = marker;
+                            if (label && zoom > 7) {
+                                this.drawLabel(label, scale, x, y);
+                            }
+                        }
                     }
-                }
 
-                prevZoom = zoom;
-                renderer.render(container);
-            }, this.pixiContainer);
-            this.pixiOverlay.addTo(this.map);
+                    prevZoom = zoom;
+                    renderer.render(container);
+                },
+                this.pixiContainer,
+                { padding: 0 }
+            ).addTo(this.map);
         };
 
-        drawMarker = (graphic: PIXI.Graphics, _marker: MapMarker, x: number, y: number, scale: number) => {
-            graphic.lineStyle(3 / scale, 0x3388ff, 1);
-            graphic.beginFill(0xff0000);
-            graphic.drawCircle(x, y, 10 / scale);
+        private drawMarker = (graphic: Graphics, _marker: MapMarker, x: number, y: number, scale: number) => {
+            graphic.lineStyle(3 / scale, 0xd1e751, 1);
+            graphic.beginFill(0x26ade4);
+            graphic.drawCircle(x, y, 12 / scale);
             graphic.endFill();
         };
+
+        private drawLabel(label: string, scale: any, x: any, y: any) {
+            const width = (label.length * 8) / scale;
+            const text = new Text(label, {
+                fontSize: 12
+            });
+            text.roundPixels = true;
+            text.zIndex = 2;
+            text.x = x - width * 0.5;
+            text.y = y - (18 / scale) * 0.5;
+            text.height = (16 / scale);
+            text.width = width;
+            this.pixiContainer.addChild(text);
+            this.textBuffers.push(text);
+        }
 
         render() {
             const { height } = this.props;
