@@ -110,6 +110,7 @@ export const createMap = (options: MapOptions) => {
 
             let prevZoom: number | undefined;
             this.pixiContainer = new Container();
+            this.pixiContainer.sortableChildren = true;
             this.pixiOverlay = L.pixiOverlay(
                 (utils, data) => {
                     const zoom = utils.getMap().getZoom();
@@ -143,11 +144,11 @@ export const createMap = (options: MapOptions) => {
                             }
                             const marker = this.markers[index];
                             const { x, y } = project([marker.x, marker.y]);
-                            this.drawMarker(graphic, marker, x, y, scale);
+                            this.drawMarker(index, graphic, marker, x, y, scale);
 
                             const { label } = marker;
                             if (label && zoom > 7) {
-                                this.drawLabel(label, scale, x, y);
+                                this.drawLabel(index, label, scale, x, y);
                             }
                         }
                     }
@@ -160,20 +161,21 @@ export const createMap = (options: MapOptions) => {
             ).addTo(this.map);
         };
 
-        private drawMarker = (graphic: Graphics, _marker: MapMarker, x: number, y: number, scale: number) => {
+        private drawMarker = (index: number, graphic: Graphics, _marker: MapMarker, x: number, y: number, scale: number) => {
+            graphic.zIndex = index * 2;
             graphic.lineStyle(3 / scale, 0xd1e751, 1);
             graphic.beginFill(0x26ade4);
             graphic.drawCircle(x, y, 12 / scale);
             graphic.endFill();
         };
 
-        private drawLabel(label: string, scale: any, x: any, y: any) {
-            const width = (label.length * 8) / scale;
+        private drawLabel(index: number, label: string, scale: any, x: any, y: any) {
             const text = new Text(label, {
                 fontSize: 12
             });
+            const width = (label.length * 8) / scale;
+            text.zIndex = (index * 2) + 1;
             text.roundPixels = true;
-            text.zIndex = 2;
             text.x = x - width * 0.5;
             text.y = y - (18 / scale) * 0.5;
             text.height = (16 / scale);
