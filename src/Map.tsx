@@ -26,7 +26,7 @@ type MapMarker = {
     x: number;
     y: number;
     label?: string;
-    shape?: 'circle' | 'square' | 'triangleUp' | 'triangleDown' | 'star5' | 'star7';
+    shape?: 'circle' | 'square' | 'triangleUp' | 'triangleDown' | 'star5' | 'star7' | 'rhombus';
 };
 
 export type MapProps = {
@@ -172,10 +172,6 @@ export const createMap = (options: MapOptions) => {
         ) => {
             graphics.zIndex = zIndex * 2;
             switch (marker.shape) {
-                case 'circle':
-                default:
-                    this.drawCircle(graphics, marker, x, y, scale);
-                    break;
                 case 'square':
                     this.drawSquare(graphics, marker, x, y, scale);
                     break;
@@ -188,6 +184,13 @@ export const createMap = (options: MapOptions) => {
                 case 'star5':
                 case 'star7':
                     this.drawStar(graphics, marker, x, y, scale);
+                    break;
+                case 'rhombus':
+                    this.drawRhombus(graphics, marker, x, y, scale);
+                    break;
+                case 'circle':
+                default:
+                    this.drawCircle(graphics, marker, x, y, scale);
                     break;
             }
         };
@@ -288,6 +291,34 @@ export const createMap = (options: MapOptions) => {
             graphics.lineTo(left[0], left[1]);
             graphics.lineTo(right[0], right[1]);
             graphics.lineTo(bottom[0], bottom[1]);
+            graphics.endFill();
+        };
+
+        private drawRhombus = (
+            graphics: Graphics,
+            _marker: MapMarker,
+            centerX: number,
+            centerY: number,
+            scale: number
+        ) => {
+            const height = 36 / scale;
+            const width = (height * 0.85);
+
+            const halfWidth = width * 0.5;
+            const halfHeight = height * 0.5;
+
+            const top = [centerX, centerY - halfHeight];
+            const left = [centerX - halfWidth, centerY];
+            const right = [centerX + halfWidth, centerY];
+            const bottom = [centerX, centerY + halfHeight];
+
+            graphics.lineStyle(3 / scale, 0xd1e751, 1);
+            graphics.beginFill(0x26ade4);
+            graphics.moveTo(top[0], top[1]);
+            graphics.lineTo(left[0], left[1]);
+            graphics.lineTo(bottom[0], bottom[1]);
+            graphics.lineTo(right[0], right[1]);
+            graphics.lineTo(top[0], top[1]);
             graphics.endFill();
         };
 
