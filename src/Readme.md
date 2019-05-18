@@ -9,9 +9,9 @@ const createMarkers = () => {
         let shape;
         const r = Math.random();
         if (r < 0.25) {
-            shape = 'triangleUp';
+            shape = 'star5';
         } else if (r > 0.75) {
-            shape = 'triangleDown';
+            shape = 'star7';
         } else {
             shape = 'square';
         }

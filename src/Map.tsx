@@ -26,7 +26,7 @@ type MapMarker = {
     x: number;
     y: number;
     label?: string;
-    shape?: 'circle' | 'square' | 'triangleUp' | 'triangleDown';
+    shape?: 'circle' | 'square' | 'triangleUp' | 'triangleDown' | 'star5' | 'star7';
 };
 
 export type MapProps = {
@@ -139,13 +139,13 @@ export const createMap = (options: MapOptions) => {
                         this.textBuffers = [];
                         // draw
                         for (let index = 0; index < this.markers.length; index++) {
-                            const graphic = this.pixiGraphics[index];
-                            if (!graphic) {
+                            const graphics = this.pixiGraphics[index];
+                            if (!graphics) {
                                 break;
                             }
                             const marker = this.markers[index];
                             const { x, y } = project([marker.x, marker.y]);
-                            this.drawMarker(graphic, marker, x, y, scale, index);
+                            this.drawMarker(graphics, marker, x, y, scale, index);
 
                             const { label } = marker;
                             if (label && zoom > 7) {
@@ -163,40 +163,57 @@ export const createMap = (options: MapOptions) => {
         };
 
         private drawMarker = (
-            graphic: Graphics,
+            graphics: Graphics,
             marker: MapMarker,
             x: number,
             y: number,
             scale: number,
             zIndex: number
         ) => {
-            graphic.zIndex = zIndex * 2;
+            graphics.zIndex = zIndex * 2;
             switch (marker.shape) {
                 case 'circle':
                 default:
-                    this.drawCircle(graphic, marker, x, y, scale);
+                    this.drawCircle(graphics, marker, x, y, scale);
                     break;
                 case 'square':
-                    this.drawSquare(graphic, marker, x, y, scale);
+                    this.drawSquare(graphics, marker, x, y, scale);
                     break;
                 case 'triangleUp':
-                    this.drawTriangleUp(graphic, marker, x, y, scale);
+                    this.drawTriangleUp(graphics, marker, x, y, scale);
                     break;
                 case 'triangleDown':
-                    this.drawTriangleDown(graphic, marker, x, y, scale);
+                    this.drawTriangleDown(graphics, marker, x, y, scale);
+                    break;
+                case 'star5':
+                case 'star7':
+                    this.drawStar(graphics, marker, x, y, scale);
                     break;
             }
         };
 
-        private drawCircle = (graphic: Graphics, _marker: MapMarker, x: number, y: number, scale: number) => {
-            graphic.lineStyle(3 / scale, 0xd1e751, 1);
-            graphic.beginFill(0x26ade4);
-            graphic.drawCircle(x, y, 16 / scale);
-            graphic.endFill();
+        private drawCircle = (graphics: Graphics, _marker: MapMarker, x: number, y: number, scale: number) => {
+            const width = 32;
+            graphics.lineStyle(3 / scale, 0xd1e751, 1);
+            graphics.beginFill(0x26ade4);
+            graphics.drawCircle(x, y, (width * 0.5) / scale);
+            graphics.endFill();
+        };
+
+        private drawStar = (graphics: Graphics, marker: MapMarker, x: number, y: number, scale: number) => {
+            const points = marker.shape === 'star5' ? 5 : 7;
+            const width = 32;
+            const outerRadius = width * 0.6;
+
+            graphics.lineStyle(3 / scale, 0xd1e751, 1);
+            graphics.beginFill(0x26ade4);
+
+            graphics.drawStar(x, y, points, outerRadius / scale);
+            graphics.endFill();
         };
 
         private drawSquare = (
-            graphic: Graphics,
+            graphics: Graphics,
             _marker: MapMarker,
             centerX: number,
             centerY: number,
@@ -205,10 +222,10 @@ export const createMap = (options: MapOptions) => {
             const width = 28 / scale;
             const x = centerX - width * 0.5;
             const y = centerY - width * 0.5;
-            graphic.lineStyle(3 / scale, 0xd1e751, 1);
-            graphic.beginFill(0x26ade4);
-            graphic.drawRect(x, y, width, width);
-            graphic.endFill();
+            graphics.lineStyle(3 / scale, 0xd1e751, 1);
+            graphics.beginFill(0x26ade4);
+            graphics.drawRect(x, y, width, width);
+            graphics.endFill();
         };
 
         // sqrt(3) / 2
