@@ -36,9 +36,9 @@ export type MapProps = {
 
 export const createMap = (options: MapOptions) => {
     const center = options.initialCenter || [54.326558, 10.159083];
-    const zoom = options.initialZoom || 12;
+    const zoom = options.initialZoom || 5;
     const minZoom = 0;
-    const maxZoom = 14;
+    const maxZoom = 15;
 
     return class Map extends React.PureComponent<MapProps> {
         map: L.Map;
@@ -148,7 +148,7 @@ export const createMap = (options: MapOptions) => {
                             this.drawMarker(graphics, marker, x, y, scale, index);
 
                             const { label } = marker;
-                            if (label && zoom > 7) {
+                            if (label && zoom > 11) {
                                 this.drawLabel(label, scale, x, y, index);
                             }
                         }
@@ -302,7 +302,7 @@ export const createMap = (options: MapOptions) => {
             scale: number
         ) => {
             const height = 36 / scale;
-            const width = (height * 0.85);
+            const width = height * 0.8;
 
             const halfWidth = width * 0.5;
             const halfHeight = height * 0.5;
