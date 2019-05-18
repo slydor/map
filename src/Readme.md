@@ -6,7 +6,16 @@ const createMarkers = () => {
     for (let i = 0; i < 50; i++) {
         const x = 54.326558 + Math.random() * 0.1 - 0.05;
         const y = 10.159083 + Math.random() * 0.2 - 0.1;
-        markers.push({ x, y, label: `${i % 100}`, shape: Math.random() > 0.5 ? 'square' : 'triangleTop' });
+        let shape;
+        const r = Math.random();
+        if (r < 0.25) {
+            shape = 'triangleUp';
+        } else if (r > 0.75) {
+            shape = 'triangleDown';
+        } else {
+            shape = 'square';
+        }
+        markers.push({ x, y, label: `${i % 100}`, shape });
     }
     return markers;
 };

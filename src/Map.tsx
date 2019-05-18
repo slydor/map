@@ -26,7 +26,7 @@ type MapMarker = {
     x: number;
     y: number;
     label?: string;
-    shape?: 'circle' | 'square' | 'triangleTop';
+    shape?: 'circle' | 'square' | 'triangleUp' | 'triangleDown';
 };
 
 export type MapProps = {
@@ -179,8 +179,11 @@ export const createMap = (options: MapOptions) => {
                 case 'square':
                     this.drawSquare(graphic, marker, x, y, scale);
                     break;
-                case 'triangleTop':
-                    this.drawTriangleTop(graphic, marker, x, y, scale);
+                case 'triangleUp':
+                    this.drawTriangleUp(graphic, marker, x, y, scale);
+                    break;
+                case 'triangleDown':
+                    this.drawTriangleDown(graphic, marker, x, y, scale);
                     break;
             }
         };
@@ -213,7 +216,7 @@ export const createMap = (options: MapOptions) => {
         // sqrt(3) / 6
         INNER_TRIANGLE_RADIUS = 0.28867513459481288225457439025098;
 
-        private drawTriangleTop = (
+        private drawTriangleUp = (
             graphics: Graphics,
             _marker: MapMarker,
             centerX: number,
@@ -239,6 +242,35 @@ export const createMap = (options: MapOptions) => {
             graphics.lineTo(left[0], left[1]);
             graphics.lineTo(right[0], right[1]);
             graphics.lineTo(top[0], top[1]);
+            graphics.endFill();
+        };
+
+        private drawTriangleDown = (
+            graphics: Graphics,
+            _marker: MapMarker,
+            centerX: number,
+            centerY: number,
+            scale: number
+        ) => {
+            const width = 30;
+            // use scale factor of 1.2 to make triangles slightly bigger
+            const length = (width * 1.2) / scale;
+            const halfLength = length * 0.5;
+
+            const height = length * this.TRIANGLE_HEIGHT;
+            const heightTop = length * this.INNER_TRIANGLE_RADIUS;
+            const heightBottom = height - heightTop;
+
+            const left = [centerX - halfLength, centerY - heightTop];
+            const right = [centerX + halfLength, centerY - heightTop];
+            const bottom = [centerX, centerY + heightBottom];
+
+            graphics.lineStyle(3 / scale, 0xd1e751, 1);
+            graphics.beginFill(0x26ade4);
+            graphics.moveTo(bottom[0], bottom[1]);
+            graphics.lineTo(left[0], left[1]);
+            graphics.lineTo(right[0], right[1]);
+            graphics.lineTo(bottom[0], bottom[1]);
             graphics.endFill();
         };
 
