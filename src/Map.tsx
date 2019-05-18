@@ -26,6 +26,7 @@ type MapMarker = {
     x: number;
     y: number;
     label?: string;
+    shape?: 'circle' | 'square';
 };
 
 export type MapProps = {
@@ -35,7 +36,7 @@ export type MapProps = {
 
 export const createMap = (options: MapOptions) => {
     const center = options.initialCenter || [54.326558, 10.159083];
-    const zoom = options.initialZoom || 11;
+    const zoom = options.initialZoom || 12;
     const minZoom = 0;
     const maxZoom = 14;
 
@@ -144,11 +145,11 @@ export const createMap = (options: MapOptions) => {
                             }
                             const marker = this.markers[index];
                             const { x, y } = project([marker.x, marker.y]);
-                            this.drawMarker(index, graphic, marker, x, y, scale);
+                            this.drawMarker(graphic, marker, x, y, scale, index);
 
                             const { label } = marker;
                             if (label && zoom > 7) {
-                                this.drawLabel(index, label, scale, x, y);
+                                this.drawLabel(label, scale, x, y, index);
                             }
                         }
                     }
@@ -161,24 +162,59 @@ export const createMap = (options: MapOptions) => {
             ).addTo(this.map);
         };
 
-        private drawMarker = (index: number, graphic: Graphics, _marker: MapMarker, x: number, y: number, scale: number) => {
-            graphic.zIndex = index * 2;
+        private drawMarker = (
+            graphic: Graphics,
+            marker: MapMarker,
+            x: number,
+            y: number,
+            scale: number,
+            zIndex: number
+        ) => {
+            graphic.zIndex = zIndex * 2;
+            switch (marker.shape) {
+                case 'circle':
+                default:
+                    this.drawCircle(graphic, marker, x, y, scale);
+                    break;
+                case 'square':
+                    this.drawSquare(graphic, marker, x, y, scale);
+                    break;
+            }
+        };
+
+        private drawCircle = (graphic: Graphics, _marker: MapMarker, x: number, y: number, scale: number) => {
             graphic.lineStyle(3 / scale, 0xd1e751, 1);
             graphic.beginFill(0x26ade4);
-            graphic.drawCircle(x, y, 12 / scale);
+            graphic.drawCircle(x, y, 16 / scale);
             graphic.endFill();
         };
 
-        private drawLabel(index: number, label: string, scale: any, x: any, y: any) {
+        private drawSquare = (
+            graphic: Graphics,
+            _marker: MapMarker,
+            centerX: number,
+            centerY: number,
+            scale: number
+        ) => {
+            const width = 28 / scale;
+            const x = centerX - width * 0.5;
+            const y = centerY - width * 0.5;
+            graphic.lineStyle(3 / scale, 0xd1e751, 1);
+            graphic.beginFill(0x26ade4);
+            graphic.drawRect(x, y, width, width);
+            graphic.endFill();
+        };
+
+        private drawLabel(label: string, scale: number, x: number, y: number, zIndex: number) {
             const text = new Text(label, {
                 fontSize: 12
             });
             const width = (label.length * 8) / scale;
-            text.zIndex = (index * 2) + 1;
+            text.zIndex = zIndex * 2 + 1;
             text.roundPixels = true;
             text.x = x - width * 0.5;
             text.y = y - (18 / scale) * 0.5;
-            text.height = (16 / scale);
+            text.height = 16 / scale;
             text.width = width;
             this.pixiContainer.addChild(text);
             this.textBuffers.push(text);
