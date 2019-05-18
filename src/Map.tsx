@@ -15,7 +15,7 @@ declare module 'leaflet' {
     ) => PixiOverlay;
 }
 
-const MARKER_LIMIT = 5000;
+const MARKER_LIMIT = 10000;
 
 type MapOptions = {
     initialCenter?: L.LatLngExpression;
@@ -26,7 +26,7 @@ type MapMarker = {
     x: number;
     y: number;
     label?: string;
-    shape?: 'circle' | 'square' | 'triangleUp' | 'triangleDown' | 'star5' | 'star7' | 'rhombus';
+    shape?: 'circle' | 'square' | 'triangleUp' | 'triangleDown' | 'star4' | 'star5' | 'star7' | 'rhombus';
 };
 
 export type MapProps = {
@@ -38,7 +38,7 @@ export const createMap = (options: MapOptions) => {
     const center = options.initialCenter || [54.326558, 10.159083];
     const zoom = options.initialZoom || 5;
     const minZoom = 0;
-    const maxZoom = 15;
+    const maxZoom = 18;
 
     return class Map extends React.PureComponent<MapProps> {
         map: L.Map;
@@ -181,6 +181,7 @@ export const createMap = (options: MapOptions) => {
                 case 'triangleDown':
                     this.drawTriangleDown(graphics, marker, x, y, scale);
                     break;
+                case 'star4':
                 case 'star5':
                 case 'star7':
                     this.drawStar(graphics, marker, x, y, scale);
@@ -195,23 +196,29 @@ export const createMap = (options: MapOptions) => {
             }
         };
 
-        private drawCircle = (graphics: Graphics, _marker: MapMarker, x: number, y: number, scale: number) => {
+        private drawCircle = (
+            graphics: Graphics,
+            _marker: MapMarker,
+            centerX: number,
+            centerY: number,
+            scale: number
+        ) => {
             const width = 32;
+            const radius = (width * 0.5) / scale;
             graphics.lineStyle(3 / scale, 0xd1e751, 1);
             graphics.beginFill(0x26ade4);
-            graphics.drawCircle(x, y, (width * 0.5) / scale);
+            // we won't use Graphics.drawCircle here because it draws weird edgeg polygons on close zoom levels -AP
+            graphics.drawStar(centerX, centerY, 10, radius, radius);
             graphics.endFill();
         };
 
-        private drawStar = (graphics: Graphics, marker: MapMarker, x: number, y: number, scale: number) => {
-            const points = marker.shape === 'star5' ? 5 : 7;
+        private drawStar = (graphics: Graphics, marker: MapMarker, centerX: number, centerY: number, scale: number) => {
+            const points = +marker.shape.split('star')[1];
             const width = 32;
             const outerRadius = width * 0.6;
-
             graphics.lineStyle(3 / scale, 0xd1e751, 1);
             graphics.beginFill(0x26ade4);
-
-            graphics.drawStar(x, y, points, outerRadius / scale);
+            graphics.drawStar(centerX, centerY, points, outerRadius / scale);
             graphics.endFill();
         };
 
@@ -252,16 +259,19 @@ export const createMap = (options: MapOptions) => {
             const heightBottom = length * this.INNER_TRIANGLE_RADIUS;
             const heightTop = height - heightBottom;
 
-            const top = [centerX, centerY - heightTop];
-            const left = [centerX - halfLength, centerY + heightBottom];
-            const right = [centerX + halfLength, centerY + heightBottom];
+            const topX = centerX;
+            const topY = centerY - heightTop;
+            const leftX = centerX - halfLength;
+            const leftY = centerY + heightBottom;
+            const rightX = centerX + halfLength;
+            const rightY = leftY;
 
             graphics.lineStyle(3 / scale, 0xd1e751, 1);
             graphics.beginFill(0x26ade4);
-            graphics.moveTo(top[0], top[1]);
-            graphics.lineTo(left[0], left[1]);
-            graphics.lineTo(right[0], right[1]);
-            graphics.lineTo(top[0], top[1]);
+            graphics.moveTo(topX, topY);
+            graphics.lineTo(leftX, leftY);
+            graphics.lineTo(rightX, rightY);
+            graphics.lineTo(topX, topY);
             graphics.endFill();
         };
 
@@ -281,16 +291,19 @@ export const createMap = (options: MapOptions) => {
             const heightTop = length * this.INNER_TRIANGLE_RADIUS;
             const heightBottom = height - heightTop;
 
-            const left = [centerX - halfLength, centerY - heightTop];
-            const right = [centerX + halfLength, centerY - heightTop];
-            const bottom = [centerX, centerY + heightBottom];
+            const leftX = centerX - halfLength;
+            const leftY = centerY - heightTop;
+            const rightX = centerX + halfLength;
+            const rightY = leftY;
+            const bottomX = centerX;
+            const bottomY = centerY + heightBottom;
 
             graphics.lineStyle(3 / scale, 0xd1e751, 1);
             graphics.beginFill(0x26ade4);
-            graphics.moveTo(bottom[0], bottom[1]);
-            graphics.lineTo(left[0], left[1]);
-            graphics.lineTo(right[0], right[1]);
-            graphics.lineTo(bottom[0], bottom[1]);
+            graphics.moveTo(bottomX, bottomY);
+            graphics.lineTo(leftX, leftY);
+            graphics.lineTo(rightX, rightY);
+            graphics.lineTo(bottomX, bottomY);
             graphics.endFill();
         };
 
@@ -307,18 +320,22 @@ export const createMap = (options: MapOptions) => {
             const halfWidth = width * 0.5;
             const halfHeight = height * 0.5;
 
-            const top = [centerX, centerY - halfHeight];
-            const left = [centerX - halfWidth, centerY];
-            const right = [centerX + halfWidth, centerY];
-            const bottom = [centerX, centerY + halfHeight];
+            const topX = centerX;
+            const topY = centerY - halfHeight;
+            const leftX = centerX - halfWidth;
+            const leftY = centerY;
+            const rightX = centerX + halfWidth;
+            const rightY = centerY;
+            const bottomX = centerX;
+            const bottomY = centerY + halfHeight;
 
             graphics.lineStyle(3 / scale, 0xd1e751, 1);
             graphics.beginFill(0x26ade4);
-            graphics.moveTo(top[0], top[1]);
-            graphics.lineTo(left[0], left[1]);
-            graphics.lineTo(bottom[0], bottom[1]);
-            graphics.lineTo(right[0], right[1]);
-            graphics.lineTo(top[0], top[1]);
+            graphics.moveTo(topX, topY);
+            graphics.lineTo(leftX, leftY);
+            graphics.lineTo(bottomX, bottomY);
+            graphics.lineTo(rightX, rightY);
+            graphics.lineTo(topX, topY);
             graphics.endFill();
         };
 

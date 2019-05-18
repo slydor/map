@@ -11,7 +11,7 @@ const createMarkers = () => {
         if (r < 0.25) {
             shape = 'star5';
         } else if (r > 0.75) {
-            shape = 'rhombus';
+            shape = 'triangleUp';
         } else {
             shape = 'square';
         }
