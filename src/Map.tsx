@@ -26,7 +26,7 @@ type MapMarker = {
     x: number;
     y: number;
     label?: string;
-    shape?: 'circle' | 'square';
+    shape?: 'circle' | 'square' | 'triangleTop';
 };
 
 export type MapProps = {
@@ -179,6 +179,9 @@ export const createMap = (options: MapOptions) => {
                 case 'square':
                     this.drawSquare(graphic, marker, x, y, scale);
                     break;
+                case 'triangleTop':
+                    this.drawTriangleTop(graphic, marker, x, y, scale);
+                    break;
             }
         };
 
@@ -203,6 +206,40 @@ export const createMap = (options: MapOptions) => {
             graphic.beginFill(0x26ade4);
             graphic.drawRect(x, y, width, width);
             graphic.endFill();
+        };
+
+        // sqrt(3) / 2
+        TRIANGLE_HEIGHT = 0.86602540378443864676372317075294;
+        // sqrt(3) / 6
+        INNER_TRIANGLE_RADIUS = 0.28867513459481288225457439025098;
+
+        private drawTriangleTop = (
+            graphics: Graphics,
+            _marker: MapMarker,
+            centerX: number,
+            centerY: number,
+            scale: number
+        ) => {
+            const width = 30;
+            // use scale factor of 1.2 to make triangles slightly bigger
+            const length = (width * 1.2) / scale;
+            const halfLength = length * 0.5;
+
+            const height = length * this.TRIANGLE_HEIGHT;
+            const heightBottom = length * this.INNER_TRIANGLE_RADIUS;
+            const heightTop = height - heightBottom;
+
+            const top = [centerX, centerY - heightTop];
+            const left = [centerX - halfLength, centerY + heightBottom];
+            const right = [centerX + halfLength, centerY + heightBottom];
+
+            graphics.lineStyle(3 / scale, 0xd1e751, 1);
+            graphics.beginFill(0x26ade4);
+            graphics.moveTo(top[0], top[1]);
+            graphics.lineTo(left[0], left[1]);
+            graphics.lineTo(right[0], right[1]);
+            graphics.lineTo(top[0], top[1]);
+            graphics.endFill();
         };
 
         private drawLabel(label: string, scale: number, x: number, y: number, zIndex: number) {
