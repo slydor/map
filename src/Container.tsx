@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { MapProps, createMap } from './Map';
 
-const Map = createMap({initialZoom:10});
+// center Berlin
+const Map = createMap({ initialZoom: 10, initialCenter: [52.515553, 13.361722] });
 
 export class Container extends React.PureComponent<MapProps> {
     render() {

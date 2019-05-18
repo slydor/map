@@ -16,6 +16,7 @@ declare module 'leaflet' {
 }
 
 const MARKER_LIMIT = 10000;
+const MARKER_LABEL_LIMIT = 1000;
 
 type MapOptions = {
     initialCenter?: L.LatLngExpression;
@@ -109,7 +110,7 @@ export const createMap = (options: MapOptions) => {
                     'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>'
             }).addTo(this.map);
 
-            let prevZoom: number | undefined;
+            let previousZoom: number | undefined;
             this.pixiContainer = new Container();
             this.pixiContainer.sortableChildren = true;
             this.pixiOverlay = L.pixiOverlay(
@@ -120,23 +121,18 @@ export const createMap = (options: MapOptions) => {
                     const project = utils.latLngToLayerPoint;
                     const scale = utils.getScale();
 
-                    const shouldUpdateMarker = Array.isArray(data);
+                    const rerendeForNewMarker = Array.isArray(data);
 
-                    if (shouldUpdateMarker) {
+                    if (rerendeForNewMarker) {
                         this.markers = data as Array<MapMarker>;
                     }
 
-                    if (shouldUpdateMarker || prevZoom !== zoom) {
+                    if (rerendeForNewMarker || previousZoom !== zoom) {
                         if (this.pixiGraphics.length < this.markers.length) {
                             this.increaseGraphicsBuffer(this.markers.length - this.pixiGraphics.length);
                         }
                         // cleanup from previous rendering
                         this.pixiGraphics.forEach(graphic => graphic.clear());
-                        this.textBuffers.forEach(text => {
-                            text.destroy();
-                            this.pixiContainer.removeChild(text);
-                        });
-                        this.textBuffers = [];
                         // draw
                         for (let index = 0; index < this.markers.length; index++) {
                             const graphics = this.pixiGraphics[index];
@@ -146,15 +142,45 @@ export const createMap = (options: MapOptions) => {
                             const marker = this.markers[index];
                             const { x, y } = project([marker.x, marker.y]);
                             this.drawMarker(graphics, marker, x, y, scale, index);
+                        }
+                    }
 
+                    // unfortunately we need to update Text objects every time, because they cannot be reused like Graphics
+                    this.textBuffers.forEach(text => {
+                        text.destroy();
+                        this.pixiContainer.removeChild(text);
+                    });
+                    this.textBuffers = [];
+
+                    if (zoom > 12) {
+                        let amountLabelDrawn = 0;
+                        // reverse loop because of zIndex order
+                        for (
+                            let index = this.markers.length - 1;
+                            index >= 0 && amountLabelDrawn < MARKER_LABEL_LIMIT;
+                            index--
+                        ) {
+                            const graphics = this.pixiGraphics[index];
+                            if (!graphics) {
+                                continue;
+                            }
+
+                            const marker = this.markers[index];
                             const { label } = marker;
-                            if (label && zoom > 11) {
-                                this.drawLabel(label, scale, x, y, index);
+
+                            if (label) {
+                                const position: [number, number] = [marker.x, marker.y];
+                                const { x, y } = project(position);
+                                const currentMapViewBounds = this.map.getBounds();
+                                if (currentMapViewBounds.contains(position)) {
+                                    this.drawLabel(label, scale, x, y, index);
+                                    amountLabelDrawn++;
+                                }
                             }
                         }
                     }
 
-                    prevZoom = zoom;
+                    previousZoom = zoom;
                     renderer.render(container);
                 },
                 this.pixiContainer,
