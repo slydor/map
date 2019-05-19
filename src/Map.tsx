@@ -160,6 +160,7 @@ export const createMap = (options: MapOptions) => {
 
                     if (zoom > 12) {
                         let amountLabelDrawn = 0;
+                        const currentMapViewBounds = this.map.getBounds();
                         // reverse loop because of zIndex order (if we have more to draw than limit at least we want the markers above have a label drawn)
                         for (
                             let index = this.markers.length - 1;
@@ -177,7 +178,6 @@ export const createMap = (options: MapOptions) => {
                             if (label) {
                                 const position: [number, number] = [marker.x, marker.y];
                                 const { x, y } = project(position);
-                                const currentMapViewBounds = this.map.getBounds();
                                 if (currentMapViewBounds.contains(position)) {
                                     this.drawLabel(marker, scale, x, y, index);
                                     amountLabelDrawn++;
