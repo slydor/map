@@ -4,6 +4,8 @@ import 'leaflet/dist/leaflet.css';
 import { Container, Graphics, Text } from 'pixi.js';
 import 'leaflet-pixi-overlay';
 
+import { getContrastColor } from './getContrastColor';
+
 declare module 'leaflet' {
     class PixiOverlay extends L.Layer {
         redraw: (data: Array<MapMarker>) => void;
@@ -28,6 +30,10 @@ type MapMarker = {
     y: number;
     label?: string;
     shape?: 'circle' | 'square' | 'triangleUp' | 'triangleDown' | 'star4' | 'star5' | 'star7' | 'rhombus';
+    /** hex color string only */
+    background?: string;
+    /** hex color string only */
+    borderColor?: string;
 };
 
 export type MapProps = {
@@ -173,7 +179,7 @@ export const createMap = (options: MapOptions) => {
                                 const { x, y } = project(position);
                                 const currentMapViewBounds = this.map.getBounds();
                                 if (currentMapViewBounds.contains(position)) {
-                                    this.drawLabel(label, scale, x, y, index);
+                                    this.drawLabel(marker, scale, x, y, index);
                                     amountLabelDrawn++;
                                 }
                             }
@@ -188,38 +194,51 @@ export const createMap = (options: MapOptions) => {
             ).addTo(this.map);
         };
 
+        convertColor = (hexcolor: string | undefined, defaultValue: number): number => {
+            if (!hexcolor || hexcolor.length < 6) {
+                return defaultValue;
+            }
+            const startIndex = hexcolor.startsWith('#') ? 1 : 0;
+            const hex = parseInt(hexcolor.substr(startIndex, 6), 16);
+            return hex;
+        };
+
         private drawMarker = (
             graphics: Graphics,
             marker: MapMarker,
-            x: number,
-            y: number,
+            centerX: number,
+            centerY: number,
             scale: number,
             zIndex: number
         ) => {
+            const { borderColor, background, shape } = marker;
             graphics.zIndex = zIndex * 2;
-            switch (marker.shape) {
+            graphics.lineStyle(3 / scale, this.convertColor(borderColor, 0xd1e751));
+            graphics.beginFill(this.convertColor(background, 0x26ade4));
+            switch (shape) {
                 case 'square':
-                    this.drawSquare(graphics, marker, x, y, scale);
+                    this.drawSquare(graphics, marker, centerX, centerY, scale);
                     break;
                 case 'triangleUp':
-                    this.drawTriangleUp(graphics, marker, x, y, scale);
+                    this.drawTriangleUp(graphics, marker, centerX, centerY, scale);
                     break;
                 case 'triangleDown':
-                    this.drawTriangleDown(graphics, marker, x, y, scale);
+                    this.drawTriangleDown(graphics, marker, centerX, centerY, scale);
                     break;
                 case 'star4':
                 case 'star5':
                 case 'star7':
-                    this.drawStar(graphics, marker, x, y, scale);
+                    this.drawStar(graphics, marker, centerX, centerY, scale);
                     break;
                 case 'rhombus':
-                    this.drawRhombus(graphics, marker, x, y, scale);
+                    this.drawRhombus(graphics, marker, centerX, centerY, scale);
                     break;
                 case 'circle':
                 default:
-                    this.drawCircle(graphics, marker, x, y, scale);
+                    this.drawCircle(graphics, marker, centerX, centerY, scale);
                     break;
             }
+            graphics.endFill();
         };
 
         private drawCircle = (
@@ -231,21 +250,17 @@ export const createMap = (options: MapOptions) => {
         ) => {
             const width = 32;
             const radius = (width * 0.5) / scale;
-            graphics.lineStyle(3 / scale, 0xd1e751, 1);
-            graphics.beginFill(0x26ade4);
+
             // we won't use Graphics.drawCircle here because it draws weird edgeg polygons on close zoom levels -AP
             graphics.drawStar(centerX, centerY, 10, radius, radius);
-            graphics.endFill();
         };
 
         private drawStar = (graphics: Graphics, marker: MapMarker, centerX: number, centerY: number, scale: number) => {
             const points = +marker.shape.split('star')[1];
             const width = 32;
             const outerRadius = width * 0.6;
-            graphics.lineStyle(3 / scale, 0xd1e751, 1);
-            graphics.beginFill(0x26ade4);
+
             graphics.drawStar(centerX, centerY, points, outerRadius / scale);
-            graphics.endFill();
         };
 
         private drawSquare = (
@@ -258,10 +273,8 @@ export const createMap = (options: MapOptions) => {
             const width = 28 / scale;
             const x = centerX - width * 0.5;
             const y = centerY - width * 0.5;
-            graphics.lineStyle(3 / scale, 0xd1e751, 1);
-            graphics.beginFill(0x26ade4);
+
             graphics.drawRect(x, y, width, width);
-            graphics.endFill();
         };
 
         // sqrt(3) / 2
@@ -292,13 +305,10 @@ export const createMap = (options: MapOptions) => {
             const rightX = centerX + halfLength;
             const rightY = leftY;
 
-            graphics.lineStyle(3 / scale, 0xd1e751, 1);
-            graphics.beginFill(0x26ade4);
             graphics.moveTo(topX, topY);
             graphics.lineTo(leftX, leftY);
             graphics.lineTo(rightX, rightY);
             graphics.lineTo(topX, topY);
-            graphics.endFill();
         };
 
         private drawTriangleDown = (
@@ -324,13 +334,10 @@ export const createMap = (options: MapOptions) => {
             const bottomX = centerX;
             const bottomY = centerY + heightBottom;
 
-            graphics.lineStyle(3 / scale, 0xd1e751, 1);
-            graphics.beginFill(0x26ade4);
             graphics.moveTo(bottomX, bottomY);
             graphics.lineTo(leftX, leftY);
             graphics.lineTo(rightX, rightY);
             graphics.lineTo(bottomX, bottomY);
-            graphics.endFill();
         };
 
         private drawRhombus = (
@@ -355,25 +362,24 @@ export const createMap = (options: MapOptions) => {
             const bottomX = centerX;
             const bottomY = centerY + halfHeight;
 
-            graphics.lineStyle(3 / scale, 0xd1e751, 1);
-            graphics.beginFill(0x26ade4);
             graphics.moveTo(topX, topY);
             graphics.lineTo(leftX, leftY);
             graphics.lineTo(bottomX, bottomY);
             graphics.lineTo(rightX, rightY);
             graphics.lineTo(topX, topY);
-            graphics.endFill();
         };
 
-        private drawLabel(label: string, scale: number, x: number, y: number, zIndex: number) {
+        private drawLabel(marker: MapMarker, scale: number, centerX: number, centerY: number, zIndex: number) {
+            const { label, background } = marker;
             const text = new Text(label, {
-                fontSize: 12
+                fontSize: 12,
+                fill: getContrastColor(background)
             });
             const width = (label.length * 8) / scale;
             text.zIndex = zIndex * 2 + 1;
             text.roundPixels = true;
-            text.x = x - width * 0.5;
-            text.y = y - (18 / scale) * 0.5;
+            text.x = centerX - width * 0.5;
+            text.y = centerY - (18 / scale) * 0.5;
             text.height = 16 / scale;
             text.width = width;
             this.pixiContainer.addChild(text);
