@@ -160,7 +160,7 @@ export const createMap = (options: MapOptions) => {
 
                     if (zoom > 12) {
                         let amountLabelDrawn = 0;
-                        // reverse loop because of zIndex order
+                        // reverse loop because of zIndex order (if we have more to draw than limit at least we want the markers above have a label drawn)
                         for (
                             let index = this.markers.length - 1;
                             index >= 0 && amountLabelDrawn < MARKER_LABEL_LIMIT;
@@ -194,7 +194,7 @@ export const createMap = (options: MapOptions) => {
             ).addTo(this.map);
         };
 
-        convertColor = (hexcolor: string | undefined, defaultValue: number): number => {
+        private convertColor = (hexcolor: string | undefined, defaultValue: number): number => {
             if (!hexcolor || hexcolor.length < 6) {
                 return defaultValue;
             }
