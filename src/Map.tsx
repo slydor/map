@@ -372,16 +372,15 @@ export const createMap = (options: MapOptions) => {
         private drawLabel(marker: MapMarker, scale: number, centerX: number, centerY: number, zIndex: number) {
             const { label, background } = marker;
             const text = new Text(label, {
-                fontSize: 12,
+                fontSize: 36,
                 fill: getContrastColor(background)
             });
-            const width = (label.length * 8) / scale;
+            const scaleFactor = 0.5;
             text.zIndex = zIndex * 2 + 1;
             text.roundPixels = true;
-            text.x = centerX - width * 0.5;
-            text.y = centerY - (18 / scale) * 0.5;
-            text.height = 16 / scale;
-            text.width = width;
+            text.x = centerX - ((text.width * scaleFactor) / scale) * 0.5;
+            text.y = centerY - ((text.height * scaleFactor) / scale) * 0.45;
+            text.scale.set(scaleFactor / scale);
             this.pixiContainer.addChild(text);
             this.textBuffers.push(text);
         }
