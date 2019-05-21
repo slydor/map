@@ -1,7 +1,7 @@
 import * as React from 'react';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, Graphics, Text, Texture, Sprite } from 'pixi.js';
 import 'leaflet-pixi-overlay';
 
 import { getContrastColor } from './getContrastColor';
@@ -58,7 +58,7 @@ export const createMap = (options: MapOptions) => {
 
         markers: Array<MapMarker>;
 
-        textBuffers: Array<Text> = [];
+        textBuffers: Array<any> = [];
 
         static defaultProps = {
             height: '100%',
@@ -369,9 +369,16 @@ export const createMap = (options: MapOptions) => {
             graphics.lineTo(topX, topY);
         };
 
+        svgXML =
+            "data:image/svg+xml;charset=utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><linearGradient id='gradient'><stop offset='10%' stop-color='%23F00'/><stop offset='90%' stop-color='%23fcc'/> </linearGradient><rect fill='url(%23gradient)' x='0' y='0' width='100%' height='100%'/></svg>";
+
+        svg =
+            'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgaWQ9ImNsb3NlIj48cGF0aCBkPSJNMjAuNzQ5IDQuNzA3TDE5LjMzNCAzLjI5MyAxMi4wNDIgMTAuNTg2IDQuNzQ5IDMuMjkzIDMuMzM0IDQuNzA3IDEwLjYyNyAxMiAzLjMzNCAxOS4yOTMgNC43NDkgMjAuNzA3IDEyLjA0MiAxMy40MTQgMTkuMzM0IDIwLjcwNyAyMC43NDkgMTkuMjkzIDEzLjQ1NiAxMnoiIGlkPSJjbG9zZV9MaW5lX0ljb25zIj48L3BhdGg+PC9zdmc+';
+        texture = Texture.from(this.svg);
+
         private drawLabel(marker: MapMarker, scale: number, centerX: number, centerY: number, zIndex: number) {
             const { label, background } = marker;
-            const text = new Text(label, {
+            /* const text = new Text(label, {
                 fontSize: 36,
                 fill: getContrastColor(background)
             });
@@ -381,6 +388,16 @@ export const createMap = (options: MapOptions) => {
             text.x = centerX - ((text.width * scaleFactor) / scale) * 0.5;
             text.y = centerY - ((text.height * scaleFactor) / scale) * 0.45;
             text.scale.set(scaleFactor / scale);
+            */
+
+            const text = new Sprite(this.texture);
+
+            text.scale.set(0.1 / scale);
+            text.anchor.set(0.5)
+            text.x = centerX;
+            text.y = centerY;
+            text.zIndex = zIndex * 2 + 1;
+
             this.pixiContainer.addChild(text);
             this.textBuffers.push(text);
         }
