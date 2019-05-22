@@ -6,6 +6,12 @@ import 'leaflet-pixi-overlay';
 
 import { getContrastColor } from './getContrastColor';
 
+import { cloneDeep } from 'lodash';
+
+const TEXTURE_XML = Texture.from(
+    'data:image/svg+xml;charset=utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" ><circle cx="12" cy="12" r="6" fill="red" /></svg>'
+);
+
 declare module 'leaflet' {
     class PixiOverlay extends L.Layer {
         redraw: (data: Array<MapMarker>) => void;
@@ -369,13 +375,6 @@ export const createMap = (options: MapOptions) => {
             graphics.lineTo(topX, topY);
         };
 
-        svgXML =
-            "data:image/svg+xml;charset=utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><linearGradient id='gradient'><stop offset='10%' stop-color='%23F00'/><stop offset='90%' stop-color='%23fcc'/> </linearGradient><rect fill='url(%23gradient)' x='0' y='0' width='100%' height='100%'/></svg>";
-
-        svg =
-            'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgaWQ9ImNsb3NlIj48cGF0aCBkPSJNMjAuNzQ5IDQuNzA3TDE5LjMzNCAzLjI5MyAxMi4wNDIgMTAuNTg2IDQuNzQ5IDMuMjkzIDMuMzM0IDQuNzA3IDEwLjYyNyAxMiAzLjMzNCAxOS4yOTMgNC43NDkgMjAuNzA3IDEyLjA0MiAxMy40MTQgMTkuMzM0IDIwLjcwNyAyMC43NDkgMTkuMjkzIDEzLjQ1NiAxMnoiIGlkPSJjbG9zZV9MaW5lX0ljb25zIj48L3BhdGg+PC9zdmc+';
-        texture = Texture.from(this.svg);
-
         private drawLabel(marker: MapMarker, scale: number, centerX: number, centerY: number, zIndex: number) {
             const { label, background } = marker;
             /* const text = new Text(label, {
@@ -390,13 +389,19 @@ export const createMap = (options: MapOptions) => {
             text.scale.set(scaleFactor / scale);
             */
 
-            const text = new Sprite(this.texture);
+            /* const svgXML =
+           'data:image/svg+xml;charset=utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="6" fill="red" /></svg>';
+            const textureXML = Texture.from(svgXML); */
 
-            text.scale.set(0.1 / scale);
-            text.anchor.set(0.5)
-            text.x = centerX;
-            text.y = centerY;
+            const text = new Sprite(TEXTURE_XML);
             text.zIndex = zIndex * 2 + 1;
+            text.roundPixels = true;
+
+            text.scale.set(0.1 / scale, 0.2 / scale);
+            text.anchor.set(0.5, 0.5);
+            text.position.set(centerX, centerY);
+
+            /* console.log(cloneDeep(text)); */
 
             this.pixiContainer.addChild(text);
             this.textBuffers.push(text);
