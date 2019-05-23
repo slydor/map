@@ -1,7 +1,7 @@
 import * as React from 'react';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, Graphics, Text, GraphicsGeometry } from 'pixi.js';
 import 'leaflet-pixi-overlay';
 
 import { getContrastColor } from './getContrastColor';
@@ -96,7 +96,10 @@ export const createMap = (options: MapOptions) => {
         };
 
         destroyGraphicsBuffer = () => {
-            this.pixiGraphics.forEach(graphic => graphic.destroy());
+            // this.pixiGraphics.forEach(graphic => graphic.destroy());
+            Object.keys(this.buffers).forEach(geometryKey => {
+                this.buffers[geometryKey].destroy();
+            });
             this.pixiContainer.destroy();
         };
 
@@ -134,20 +137,23 @@ export const createMap = (options: MapOptions) => {
                     }
 
                     if (rerendeForNewMarker || previousZoom !== zoom) {
-                        if (this.pixiGraphics.length < this.markers.length) {
+                        /* if (this.pixiGraphics.length < this.markers.length) {
                             this.increaseGraphicsBuffer(this.markers.length - this.pixiGraphics.length);
-                        }
+                        } */
                         // cleanup from previous rendering
-                        this.pixiGraphics.forEach(graphic => graphic.clear());
+                        // this.pixiGraphics.forEach(graphic => graphic.clear());
+                        Object.keys(this.buffers).forEach(geometryKey => {
+                            this.buffers[geometryKey].reset();
+                        });
                         // draw
                         for (let index = 0; index < this.markers.length; index++) {
-                            const graphics = this.pixiGraphics[index];
+                            /* const graphics = this.pixiGraphics[index];
                             if (!graphics) {
                                 break;
-                            }
+                            } */
                             const marker = this.markers[index];
                             const { x, y } = project([marker.x, marker.y]);
-                            this.drawMarker(graphics, marker, x, y, scale, index);
+                            this.drawMarkerOpt(/* graphics, */ marker, x, y, scale, index);
                         }
                     }
 
@@ -158,7 +164,7 @@ export const createMap = (options: MapOptions) => {
                     });
                     this.textBuffers = [];
 
-                    if (zoom > 12) {
+                    if (zoom > 10) {
                         let amountLabelDrawn = 0;
                         const currentMapViewBounds = this.map.getBounds();
                         // reverse loop because of zIndex order (if we have more to draw than limit at least we want the markers above have a label drawn)
@@ -167,11 +173,6 @@ export const createMap = (options: MapOptions) => {
                             index >= 0 && amountLabelDrawn < MARKER_LABEL_LIMIT;
                             index--
                         ) {
-                            const graphics = this.pixiGraphics[index];
-                            if (!graphics) {
-                                continue;
-                            }
-
                             const marker = this.markers[index];
                             const { label } = marker;
 
@@ -201,6 +202,45 @@ export const createMap = (options: MapOptions) => {
             const startIndex = hexcolor.startsWith('#') ? 1 : 0;
             const hex = parseInt(hexcolor.substr(startIndex, 6), 16);
             return hex;
+        };
+
+        buffers: { [geometryKey: string]: GraphicsBuffer } = {};
+
+        private drawMarkerOpt = (
+            marker: MapMarker,
+            centerX: number,
+            centerY: number,
+            scale: number,
+            zIndex: number
+        ) => {
+            const { borderColor, background, shape } = marker;
+            debugger
+            let graphics: Graphics;
+            const geometryKey = `${shape}-${borderColor}-${background}-${scale}`;
+            let buffer = this.buffers[geometryKey];
+            if (buffer) {
+                graphics = buffer.getGraphics();
+                if (!graphics) {
+                    console.error('no buffer left')
+                    return;
+                }
+            } else {
+                graphics = new Graphics();
+
+                const width = 32;
+                const radius = (width * 0.5) / scale;
+                graphics.lineStyle(3 / scale, this.convertColor(borderColor, 0xd1e751));
+                graphics.beginFill(this.convertColor(background, 0x26ade4));
+                graphics.drawStar(0, 0, 10, radius, radius);
+                graphics.endFill();
+            }
+
+            graphics.zIndex = zIndex * 2;
+            graphics.position.set(centerX, centerY);
+
+            if (!buffer) {
+                this.buffers[geometryKey] = new GraphicsBuffer(graphics, this.pixiContainer);
+            }
         };
 
         private drawMarker = (
@@ -391,3 +431,47 @@ export const createMap = (options: MapOptions) => {
         }
     };
 };
+
+class GraphicsBuffer {
+    static graphicsCount: number = 0;
+    private geometry: GraphicsGeometry;
+    private graphicsBuffer: Array<Graphics>;
+    private usageIndex: number;
+    private parentContainer: PIXI.Container;
+    constructor(graphicsTemplate: Graphics, parentContainer: PIXI.Container) {
+        this.geometry = graphicsTemplate.geometry;
+        this.parentContainer = parentContainer;
+        this.graphicsBuffer = [graphicsTemplate];
+        this.usageIndex = 1;
+        parentContainer.addChild(graphicsTemplate);
+        GraphicsBuffer.graphicsCount++;
+    }
+
+    reset() {
+        this.usageIndex = 0;
+        this.graphicsBuffer.forEach(graphics => graphics.clear());
+    }
+
+    destroy = () => {
+        this.geometry.destroy();
+        this.graphicsBuffer.forEach(graphics => graphics.destroy());
+    };
+
+    getGraphics = (): Graphics | null => {
+        let graphics: Graphics;
+        if (this.usageIndex >= this.graphicsBuffer.length) {
+            if (GraphicsBuffer.graphicsCount >= MARKER_LIMIT) {
+                return null;
+            }
+
+            graphics = new Graphics(this.geometry);
+            this.graphicsBuffer.push(graphics);
+            this.parentContainer.addChild(graphics);
+        } else {
+            graphics = this.graphicsBuffer[this.usageIndex];
+        }
+        this.usageIndex++;
+        GraphicsBuffer.graphicsCount++;
+        return graphics;
+    };
+}
