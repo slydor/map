@@ -251,7 +251,7 @@ export const createMap = (options: MapOptions) => {
             const width = 32;
             const radius = (width * 0.5) / scale;
 
-            // we won't use Graphics.drawCircle here because it draws weird edgeg polygons on close zoom levels -AP
+            // we won't use Graphics.drawCircle here because it draws weird edgeg polygons on close zoom levels
             graphics.drawStar(centerX, centerY, 10, radius, radius);
         };
 
